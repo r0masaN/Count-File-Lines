@@ -1,10 +1,11 @@
+#include <windows.h>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <initializer_list>
 #include <flat_set>
-#include <windows.h>
 #include <thread>
+#include <numeric>
 
 #define MAX_THREADS 8ULL
 
@@ -46,6 +47,10 @@ std::size_t file_length(const char *const file_path) {
 
 struct alignas(64) counter {
     std::size_t value;
+
+    counter operator+(const counter& other) const {
+        return {this->value + other.value};
+    }
 };
 
 std::size_t calculate_length_of_files(const std::initializer_list<std::string_view>& path_names,
@@ -70,15 +75,8 @@ std::size_t calculate_length_of_files(const std::initializer_list<std::string_vi
                             it.disable_recursion_pending();
 
                         } else if (it->is_regular_file()) {
-                            const std::string file_name{it->path().string()};
-
-                            for (const std::string_view& file_extension : files_extensions) {
-                                if (file_extension.contains(it->path().extension().string())) {
-                                    counter_ptr->value += file_length(it->path().string().c_str());
-
-                                    break;
-                                }
-                            }
+                            if (files_extensions.contains(it->path().extension().string()))
+                                counter_ptr->value += file_length(it->path().string().c_str());
                         }
                     }
                 }
@@ -88,16 +86,12 @@ std::size_t calculate_length_of_files(const std::initializer_list<std::string_vi
         }
     }
 
-    std::size_t overall_length{0};
-    for (const counter& counter : counters) overall_length += counter.value;
-
-    return overall_length;
+    return std::accumulate(counters, counters + threads_size, counter{0ULL}).value;
 }
 
 int main() {
     std::cout << calculate_length_of_files(
-        {"../../codewars_tasks", "../../leetcode_tasks", "../../collections_io_streams", "../../employees_database",
-            "../../Codewars", "../../СvsC++", "../../TextQuest", "../../Learn_C_and_C++"},
+        {"../../codewars_tasks", "../../leetcode_tasks", "../../collections_io_streams", "../../Codewars", "../../learn_cpp"},
         {"cmake-build-debug", ".idea", ".git"},
         {".h", ".c", ".hpp", ".cpp", ".tcc", ".ixx"}
      ) << "\n";
