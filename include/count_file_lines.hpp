@@ -1,17 +1,18 @@
+#ifndef COUNT_FILE_LINES_HPP
+#define COUNT_FILE_LINES_HPP
+
 #include <windows.h>
 #include <filesystem>
-#include <iostream>
-#include <string>
 #include <initializer_list>
 #include <flat_set>
 #include <thread>
 #include <numeric>
 
-#define MAX_THREADS 8ULL
+#define MAX_THREADS 8U
 
 namespace fs = std::filesystem;
 
-std::size_t file_length(const char *const file_path) {
+static inline std::size_t file_length(const char *const file_path) {
     HANDLE hFile = CreateFileA(file_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) return 0;
 
@@ -48,12 +49,12 @@ std::size_t file_length(const char *const file_path) {
 struct alignas(64) counter {
     std::size_t value;
 
-    counter operator+(const counter& other) const {
+    inline counter operator+(const counter& other) const {
         return {this->value + other.value};
     }
 };
 
-std::size_t calculate_length_of_files(const std::initializer_list<std::string_view>& path_names,
+static inline std::size_t calculate_length_of_files(const std::initializer_list<std::string_view>& path_names,
                                       const std::flat_set<std::string_view>& ignored_folders,
                                       const std::flat_set<std::string_view>& files_extensions) {
     const std::size_t paths_names_size = path_names.size(),
@@ -89,12 +90,4 @@ std::size_t calculate_length_of_files(const std::initializer_list<std::string_vi
     return std::accumulate(counters, counters + threads_size, counter{0ULL}).value;
 }
 
-int main() {
-    std::cout << calculate_length_of_files(
-        {"../../codewars_tasks", "../../leetcode_tasks", "../../collections_io_streams", "../../Codewars", "../../learn_cpp"},
-        {"cmake-build-debug", ".idea", ".git"},
-        {".h", ".c", ".hpp", ".cpp", ".tcc", ".ixx"}
-     ) << "\n";
-
-    return 0;
-}
+#endif
