@@ -14,23 +14,24 @@ namespace fs = std::filesystem;
 
 static inline std::size_t file_length(const char *const file_path) {
     HANDLE hFile = CreateFileA(file_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return 0;
+    if (hFile == INVALID_HANDLE_VALUE) [[unlikely]]
+        return 0;
 
     LARGE_INTEGER file_size;
-    if (!GetFileSizeEx(hFile, &file_size) || file_size.QuadPart == 0) {
+    if (!GetFileSizeEx(hFile, &file_size) || file_size.QuadPart == 0) [[unlikely]] {
         CloseHandle(hFile);
         return 0;
     }
 
     HANDLE hMap = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-    if (!hMap) {
+    if (!hMap) [[unlikely]] {
         CloseHandle(hFile);
         return 0;
     }
 
     const char *const pData = reinterpret_cast<const char *>(MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0));
     std::size_t count{1};
-    if (pData) {
+    if (pData) [[likely]] {
         const char *curr = pData, *const end = pData + file_size.QuadPart;
         while (curr < end && (curr = reinterpret_cast<const char *>(memchr(curr, '\n', end - curr)))) {
             ++curr;
